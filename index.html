@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Purchse Flow</title>
+        <script src="diagramflow.js"></script>
+        <link href = "https://cdnjs.cloudflare.com/ajax/libs/extjs/6.0.0/classic/theme-classic/resources/theme-classic-all.css" rel = "stylesheet" />
+        <script type = "text/javascript" src = "https://cdnjs.cloudflare.com/ajax/libs/extjs/6.0.0/ext-all.js"></script>
+        <script type = "text/javascript">
+            Ext.require(['Ext.grid.*', 'Ext.data.*', 'Ext.dd.*']);
+            Ext.define('StudentDataModel', {
+                extend: 'Ext.data.Model',
+                fields: [
+                    {name: 'text', mapping: 'text'},
+                    {name: 'name', mapping: 'name'},
+                    {name: 'age', mapping: 'age'},
+                    {name: 'marks', mapping: 'marks'}
+                ]
+            });
+            Ext.onReady(function () {
+                var myData = [
+                    {text: "PR", name: "PR", age: "16", marks: "90", leaf: true},
+                    {text: "PQ", name: "PQ", age: "18", marks: "95", leaf: true},
+                    {text: "PO", name: "PO", age: "20", marks: "68", leaf: true},
+                    {text: "PI", name: "PI", age: "21", marks: "86", leaf: true},
+                    {text: "GRN", name: "GRN", age: "22", marks: "57", leaf: true}
+                ];
+                var firstGridStore = Ext.create('Ext.data.Store', {
+                    model: 'StudentDataModel',
+                    storeId: 'StudentData1',
+                    data: myData
+                });
+                var firstGrid = Ext.create('Ext.grid.Panel', {
+                    viewConfig: {
+                        plugins: {ptype: 'gridviewdragdrop', ddGroup: '*'},
+                    },
+                    store: firstGridStore,
+                    columns: [
+                        {header: "Option", dataIndex: 'name', flex: 1, sortable: true},
+                        {xtype: 'checkcolumn', header: "Check", dataIndex: 'check', width: 60, sortable: true},
+                        {xtype: 'checkcolumn', header: "Approve", dataIndex: 'approve', width: 60, sortable: true}
+                    ],
+                    stripeRows: true,
+                    title: 'Drag from here',
+                    margins: '0 0 0 3'
+                });
+                var secondGridStore = Ext.create('Ext.data.TreeStore', {
+                    storeId: 'StudentData',
+                    model: 'StudentDataModel',
+                    root: {
+                        expanded: true,
+                        text: "Purchase Flow",
+                        name: "Purchase Flow",
+                        children: []
+                    },
+                    listeners: {
+                        datachanged: drawFlowChart,
+                        update: drawFlowChart
+                    }
+                });
+                var secondGrid = Ext.create('Ext.tree.Panel', {
+                    flex: 2,
+                    multiSelect: true,
+                    viewConfig: {
+                        plugins: {ptype: 'treeviewdragdrop', ddGroup: '*', dragGroup: 'A'},
+                        listeners: {
+                            beforedrop: function (node, data, overModel, dropPosition, dropHandlers, eOpts) {
+                                overModel.set("leaf", false);
+                                var obj = data.records[0].data;
+                                obj.originalData = data.records[0].data;
+                                obj.id = Ext.id();
+                                obj.expandable = false,
+                                        obj.expanded = true,
+                                        overModel.appendChild(obj);
+                                overModel.expand();
+                                data.records[0].store.remove(data.records[0]);
+                                return false;
+                            }
+                        }
+                    },
+                    store: secondGridStore,
+                    columns: [{
+                            xtype: 'actioncolumn',
+                            width: 25,
+                            items: [{
+                                    icon: 'remove.png', // Use a URL in the icon config
+                                    tooltip: 'remove',
+                                    handler: function (grid, rowIndex, colIndex) {
+                                        var rec = grid.getStore().getAt(rowIndex);
+                                        if (rec.data.leaf && !rec.data.root) {
+                                            var dat = rec.data.originalData;
+                                            dat.id = Ext.id();
+                                            var addAry = [dat];
+                                            firstGridStore.add(addAry);
+                                            var parentNode = rec.parentNode;
+                                            parentNode.removeChild(rec);
+                                            var isLeaf = !(parentNode.childNodes && parentNode.childNodes.length > 0) && !parentNode.data.root
+                                            parentNode.data.leaf = isLeaf;
+                                            parentNode.leaf = isLeaf;
+                                            grid.up("treepanel").reconfigure();
+                                        } else if (rec.data.root) {
+                                            alert("Root node can't be removed");
+                                        } else {
+                                            alert("Please remove the child options first");
+                                        }
+                                    },
+                                }]
+                        },
+                        {xtype: 'treecolumn', header: "Option", flex: 1, dataIndex: 'name', id: 'name', sortable: true},
+                        {xtype: 'checkcolumn', header: "Check", dataIndex: 'check', width: 60, sortable: true},
+                        {xtype: 'checkcolumn', header: "Approve", dataIndex: 'approve', width: 60, sortable: true}],
+                    stripeRows: true,
+                    title: 'To here',
+                    margins: '0 2 0 0'
+                });
+                Ext.create('Ext.Panel', {
+                    width: 700,
+                    height: 500,
+                    layout: {
+                        type: 'hbox',
+                        align: 'stretch',
+                        //	padding: 5
+                    },
+                    renderTo: 'panel',
+                    defaults: {flex: 1},
+                    items: [firstGrid, secondGrid],
+                });
+            });
+        </script>
+    </head>
+    <body onresize="drawFlowChart()">
+        <h1>Purchse Flow</h1>
+        <div>
+            <div id = "panel" align="left" style="float:left" ></div>
+            <div style="float:right;max-height: 502px;max-width:652px;overflow: auto;position:relative;width:652px;height:1800px">
+                <canvas id="myCanvas" width="650" height="500" tabindex="1"></canvas>
+            </div>
+        </div>
+        <script type = "text/javascript" src = "myScript.js"></script>
+    </body>
+</html>
